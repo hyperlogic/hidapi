@@ -234,6 +234,20 @@ static HANDLE open_device(const char *path, BOOL enumerate)
 		FILE_FLAG_OVERLAPPED,/*FILE_ATTRIBUTE_NORMAL,*/
 		0);
 
+	if (!enumerate && handle == INVALID_HANDLE_VALUE) {
+		/* Couldn't open the device. Some devices must be opened
+		   with sharing enabled (even though they are only opened once),
+		   so try it here. */
+		share_mode |= FILE_SHARE_WRITE;
+		handle = CreateFileA(path,
+			desired_access,
+			share_mode,
+			NULL,
+			OPEN_EXISTING,
+			FILE_FLAG_OVERLAPPED,
+			0);
+	}
+
 	return handle;
 }
 
@@ -791,11 +805,6 @@ int HID_API_EXPORT HID_API_CALL hid_get_feature_report(hid_device *dev, unsigned
 		register_error(dev, "Send Feature Report GetOverLappedResult");
 		return -1;
 	}
-
-	/* bytes_returned does not include the first byte which contains the
-	   report ID. The data buffer actually contains one more byte than
-	   bytes_returned. */
-	bytes_returned++;
 
 	return bytes_returned;
 #endif
